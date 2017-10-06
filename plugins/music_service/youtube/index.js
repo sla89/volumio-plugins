@@ -908,7 +908,7 @@ Youtube.prototype.parseResponseItemData = function (item) {
             break;
           case 'youtube#channel':
             url = 'youtube/channel/' + item.id.channelId;
-            type = 'radio-category';
+            type = 'item-no-menu';
             break;
           default:
             url = 'youtube/unhandled-search-kind: ' + item.id.kind;
@@ -925,7 +925,7 @@ Youtube.prototype.parseResponseItemData = function (item) {
         break;
       case 'youtube#channel':
         url = 'youtube/channel/' + item.id;
-        type = 'radio-category';
+        type = 'item-no-menu';
         break;
       case 'youtube#playlistItem':
         url = 'youtube/video/' + item.snippet.resourceId.videoId;
