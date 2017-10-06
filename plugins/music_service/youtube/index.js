@@ -557,21 +557,21 @@ Youtube.prototype.getRootContent = function () {
         availableListViews: ['list', 'grid'],
         items: [{
           service: 'youtube',
-          type: 'folder',
+          type: 'item-no-menu',
           title: 'Subscriptions',
           icon: 'fa fa-folder-open-o',
           uri: 'youtube/root/subscriptions'
         },
         {
           service: 'youtube',
-          type: 'folder',
+          type: 'item-no-menu',
           title: 'My Playlists',
           icon: 'fa fa-folder-open-o',
           uri: 'youtube/root/playlists'
         },
         {
           service: 'youtube',
-          type: 'folder',
+          type: 'item-no-menu',
           title: 'Liked Videos',
           icon: 'fa fa-folder-open-o',
           uri: 'youtube/root/likedVideos'
