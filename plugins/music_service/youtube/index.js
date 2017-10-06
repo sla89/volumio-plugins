@@ -501,20 +501,17 @@ Youtube.prototype.prefetch = function (nextTrack) {
 Youtube.prototype.getTrackInfo = function (uri) {
   var self = this;
   var deferred = libQ.defer();
-  console.log(uri);
 
   if (uri.startsWith('youtube')) {
     var uriParts = uri.split('/');
     var id = uriParts.pop();
     var kind = uriParts.pop();
-    console.log(id, kind);
 
     switch (kind) {
       case 'playlist':
         self.getPlaylistItems(id).then(function (playlistItems) {
           if (playlistItems.navigation.lists.length > 0
             && playlistItems.navigation.lists[0].items.length > 0) {
-            console.log(playlistItems.navigation.lists[0].items)
             deferred.resolve(playlistItems.navigation.lists[0].items);
           } else {
             deferred.reject(new Error('Failed to load playlist info.'));
@@ -523,7 +520,6 @@ Youtube.prototype.getTrackInfo = function (uri) {
         break;
       case 'video':
         self.getVideo(id).then(function (videoItems) {
-          console.log(JSON.stringify(videoItems));
           if (videoItems.items.length > 0) {
             deferred.resolve(videoItems.items);
           } else {
