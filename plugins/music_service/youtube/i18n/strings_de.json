@@ -1,0 +1,16 @@
+{
+  "YOUTUBE_CONFIGURATION": "Youtube Konfiguration",
+  "YOUTUBE_SETTINGS": " Einstellungen",
+  "YOUTUBE_RESULTS_LIMIT": "Ergebniss pro Seite",
+  "YOUTUBE_RESULTS_LIMIT_DOC": "Anzahl der Suchergebnisse, die angezeigt werden sollen. Playlists werden immer komplett geladen. Standardwert: 50",
+  "YOUTUBE_SAVE": "Speichern",
+  "YOUTUBE_ACCOUNT": "Account Einstellungen",
+  "YOUTUBE_LOGIN": "Login",
+  "YOUTUBE_LOGOUT": "Logout",
+  "YOUTUBE_USERNAME": "Benutzername",
+  "YOUTUBE_USERNAME_DOC": "Dein YouTube Account",
+  "YOUTUBE_GRANT_ACCESS": "Bitte gib Volumio Leserechte für deinen YouTube Account. Gib den folgenden Code auf {0} ein:",
+  "YOUTUBE_ACCESS_CODE": "Code:",
+  "YOUTUBE_ACCESS_CODE_DOC": "Gib den Code auf https://www.google.com/device ein.",
+  "YOUTUBE_HAS_ACCESS": "Volumio hat Zugriff auf Deinen YouTube Account. Wir nutzen das um Videos von deinem Account anzuzeigen."
+}
