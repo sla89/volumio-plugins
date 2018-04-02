@@ -97,7 +97,7 @@ Youtube.prototype.getUIConfig = function () {
     __dirname + '/UIConfig.json')
     .then(function (uiconf) {
       if (self.isAccessGranted()) {
-        uiconf.sections[0].description = 'Volumio has access to your YouTube account. We will only use it to display videos related to your account!';
+        uiconf.sections[0].description = self.commandRouter.getI18nString('YOUTUBE_HAS_ACCESS');
         uiconf.sections[0].content = [];
       } else {
         self.pollPermissions();
@@ -112,6 +112,17 @@ Youtube.prototype.getUIConfig = function () {
       libQ.reject(new Error());
     });
 };
+
+Youtube.prototype.getI18nFile = function (lang_code) {
+  var supportedLanguages = ['en', 'it', 'de'];
+
+  if (supportedLanguages.includes(lang_code)) {
+    return path.join(__dirname, 'i18n', 'strings_' + lang_code + '.json');
+  }
+
+  // return default i18n file
+  return path.join(__dirname, 'i18n', 'strings_en.json')
+}
 
 Youtube.prototype.setUIConfig = function (data) {
   var self = this;
@@ -268,11 +279,16 @@ Youtube.prototype.explodeUri = function (uri) {
 
     self.addPlaylist(uri.split('/').pop());
   } else {
-    self.logger.info("Youtube::explodeUri " + "https://youtube.com/oembed?format=json&url=" + uri);
+    var videoId = uri;
+    if (uri.startsWith('youtube/video/')) {
+      videoId = uri.split('/').pop();
+    }
+
+    self.logger.info("Youtube::explodeUri " + videoId);
 
     self.yt.videos.list({
       part: "snippet,contentDetails",
-      id: uri
+      id: videoId
     }, function (err, res) {
       if (err) {
         //Holy crap, something went wrong :/
@@ -283,7 +299,7 @@ Youtube.prototype.explodeUri = function (uri) {
       } else {
         self.logger.info("Youtube -> " + JSON.stringify(res));
         deferred.resolve({
-          uri: uri,
+          uri: videoId,
           service: 'youtube',
           name: res.items[0].snippet.title,
           title: res.items[0].snippet.title,
@@ -398,7 +414,7 @@ Youtube.prototype.clearAddPlayTrack = function (track) {
           });
         })
         .fail(function (e) {
-          return defer.reject(new Error());
+          return defer.reject(new Error(e));
         });
     }
   });
@@ -493,6 +509,49 @@ Youtube.prototype.prefetch = function (nextTrack) {
   });
 };
 
+Youtube.prototype.getTrackInfo = function (uri) {
+  var self = this;
+  var deferred = libQ.defer();
+
+  if (uri.startsWith('youtube')) {
+    var uriParts = uri.split('/');
+    var id = uriParts.pop();
+    var kind = uriParts.pop();
+
+    switch (kind) {
+      case 'playlist':
+        self.getPlaylistItems(id).then(function (playlistItems) {
+          if (playlistItems.navigation.lists.length > 0
+            && playlistItems.navigation.lists[0].items.length > 0) {
+            deferred.resolve(playlistItems.navigation.lists[0].items);
+          } else {
+            deferred.reject(new Error('Failed to load playlist info.'));
+          }
+        });
+        break;
+      case 'video':
+        self.getVideo(id).then(function (videoItems) {
+          if (videoItems.items.length > 0) {
+            deferred.resolve(videoItems.items);
+          } else {
+            deferred.reject(new Error('Failed to load video info.'));
+          }
+        });
+        break;
+      default:
+        self.logger.error("Youtube::getTrackInfo unknown uri kind: " + kind);
+        deferred.reject(new Error('Unknown uri kind ' + kind));
+        break;
+    }
+
+  } else {
+    self.logger.info("Youtube::getTrackInfo unknown uri: " + uri);
+    deferred.reject(new Error('Unknown uri ' + uri));
+  }
+
+  return deferred.promise;
+}
+
 Youtube.prototype.getRootContent = function () {
   var self = this;
 
@@ -509,21 +568,21 @@ Youtube.prototype.getRootContent = function () {
         availableListViews: ['list', 'grid'],
         items: [{
           service: 'youtube',
-          type: 'folder',
+          type: 'item-no-menu',
           title: 'Subscriptions',
           icon: 'fa fa-folder-open-o',
           uri: 'youtube/root/subscriptions'
         },
         {
           service: 'youtube',
-          type: 'folder',
+          type: 'item-no-menu',
           title: 'My Playlists',
           icon: 'fa fa-folder-open-o',
           uri: 'youtube/root/playlists'
         },
         {
           service: 'youtube',
-          type: 'folder',
+          type: 'item-no-menu',
           title: 'Liked Videos',
           icon: 'fa fa-folder-open-o',
           uri: 'youtube/root/likedVideos'
@@ -538,8 +597,6 @@ Youtube.prototype.getRootContent = function () {
 
 Youtube.prototype.getUserSubscriptions = function () {
   var self = this;
-  var deferred = libQ.defer();
-
   var request = {
     part: "snippet",
     mine: true,
@@ -555,10 +612,22 @@ Youtube.prototype.getUserSubscriptions = function () {
   });
 }
 
+Youtube.prototype.getVideo = function (id) {
+  var self = this;
+  var request = {
+    part: "snippet",
+    maxResults: 1,
+    id: id,
+  };
+
+  return self.youtubeRequest({
+    apiFunc: self.yt.videos.list,
+    apiRequest: request,
+  });
+}
+
 Youtube.prototype.getUserLikedVideos = function () {
   var self = this;
-  var deferred = libQ.defer();
-
   var request = {
     part: "snippet",
     myRating: 'like',
@@ -576,8 +645,6 @@ Youtube.prototype.getUserLikedVideos = function () {
 
 Youtube.prototype.getUserPlaylists = function () {
   var self = this;
-  var deferred = libQ.defer();
-
   var request = {
     part: "snippet",
     mine: true,
@@ -595,8 +662,6 @@ Youtube.prototype.getUserPlaylists = function () {
 
 Youtube.prototype.getActivities = function () {
   var self = this;
-  var deferred = libQ.defer();
-
   var request = {
     part: "snippet",
     home: true,
@@ -670,8 +735,6 @@ Youtube.prototype.getChannelSections = function (channelId) {
 
 Youtube.prototype.getTrend = function () {
   var self = this;
-  var deferred = libQ.defer();
-
   var request = {
     chart: 'mostPopular',
     part: "snippet",
@@ -690,8 +753,6 @@ Youtube.prototype.getTrend = function () {
 
 Youtube.prototype.doSearch = function (query) {
   var self = this;
-  var deferred = libQ.defer();
-
   var request = {
     q: query,
     part: "snippet",
@@ -709,8 +770,6 @@ Youtube.prototype.doSearch = function (query) {
 
 Youtube.prototype.getPlaylists = function (playlistIds) {
   var self = this;
-  var deferred = libQ.defer();
-
   var request = {
     id: playlistIds.join(','),
     part: "snippet",
@@ -729,9 +788,6 @@ Youtube.prototype.getPlaylists = function (playlistIds) {
 
 Youtube.prototype.getPlaylistItems = function (playlistId) {
   var self = this;
-  var deferred = libQ.defer();
-  console.log('playlistid:', playlistId);
-
   var request = {
     playlistId: playlistId,
     part: "snippet",
@@ -854,7 +910,7 @@ Youtube.prototype.parseResponseItemData = function (item) {
       case 'youtube#searchResult':
         switch (item.id.kind) {
           case 'youtube#video':
-            url = item.id.videoId;
+            url = 'youtube/video/' + item.id.videoId;
             type = 'song';
             break;
           case 'youtube#playlist':
@@ -863,7 +919,7 @@ Youtube.prototype.parseResponseItemData = function (item) {
             break;
           case 'youtube#channel':
             url = 'youtube/channel/' + item.id.channelId;
-            type = 'folder';
+            type = 'item-no-menu';
             break;
           default:
             url = 'youtube/unhandled-search-kind: ' + item.id.kind;
@@ -871,7 +927,7 @@ Youtube.prototype.parseResponseItemData = function (item) {
         }
         break;
       case 'youtube#video':
-        url = item.id;
+        url = 'youtube/video/' + item.id;
         type = 'song';
         break;
       case 'youtube#playlist':
@@ -880,10 +936,10 @@ Youtube.prototype.parseResponseItemData = function (item) {
         break;
       case 'youtube#channel':
         url = 'youtube/channel/' + item.id;
-        type = 'folder';
+        type = 'item-no-menu';
         break;
       case 'youtube#playlistItem':
-        url = item.snippet.resourceId.videoId;
+        url = 'youtube/video/' + item.snippet.resourceId.videoId;
         type = 'song';
         break;
       case 'youtube#subscription':
